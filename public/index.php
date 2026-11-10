@@ -46,8 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'save_item' && can_write()) {
             $inventoryId = (int)$_POST['inventory_id']; require_inventory_access($pdo, $inventoryId);
             $qty = filter_var($_POST['quantity'], FILTER_VALIDATE_INT); if ($qty === false || $qty < 0) throw new InvalidArgumentException('A mennyiség nem lehet negatív.');
-            $stmt = $pdo->prepare('INSERT INTO items(inventory_id,sku,name,quantity,unit,note,updated_by) VALUES(?,?,?,?,?,?,?) ON CONFLICT(inventory_id,sku) DO UPDATE SET name=excluded.name,quantity=excluded.quantity,unit=excluded.unit,note=excluded.note,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP');
-            $stmt->execute([$inventoryId, valid_text((string)$_POST['sku'], 60), valid_text((string)$_POST['name']),$qty,valid_text((string)$_POST['unit'],20),trim((string)$_POST['note']),user()['id']]); flash('Készletadat mentve.');
+            $location = trim((string)($_POST['location'] ?? ''));
+            $location = valid_text($location === '' ? 'allokálatlan' : $location);
+            $stmt = $pdo->prepare('INSERT INTO items(inventory_id,sku,name,quantity,unit,note,updated_by,location) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(inventory_id,sku) DO UPDATE SET name=excluded.name,quantity=excluded.quantity,unit=excluded.unit,location=excluded.location,note=excluded.note,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP');
+            $stmt->execute([$inventoryId, valid_text((string)$_POST['sku'], 60), valid_text((string)$_POST['name']),$qty,valid_text((string)$_POST['unit'],20),trim((string)$_POST['note']),user()['id'],$location]); flash('Készletadat mentve.');
         } elseif ($action === 'delete_item' && is_admin()) {
             $inventoryId=(int)$_POST['inventory_id']; require_inventory_access($pdo,$inventoryId); $pdo->prepare('DELETE FROM items WHERE id=? AND inventory_id=?')->execute([(int)$_POST['item_id'],$inventoryId]); flash('Tétel törölve.');
         } else throw new InvalidArgumentException('Nincs jogosultságod ehhez a művelethez.');
