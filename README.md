@@ -4,13 +4,25 @@ Kis költségű, függőségmentes PHP + SQLite raktárkezelő. A jogosultsági 
 
 ## Indítás
 
-PHP 8.2+ és a `pdo_sqlite` bővítmény szükséges.
+PHP 8.2+, valamint a `pdo_sqlite` és `mbstring` bővítmény szükséges.
 
 ```bash
 php -S localhost:8080 -t public
 ```
 
 Nyisd meg a `http://localhost:8080` címet. Első indításkor a felület bekéri az admin nevét és (legalább 10 karakteres) jelszavát. Az SQLite fájl automatikusan létrejön a `data/inventory.sqlite` helyen; más útvonal az `INVENTORY_DB` környezeti változóval adható meg.
+
+### Windows / XAMPP indító
+
+A projekt főkönyvtárában található `start-raktarpont-8091.bat` fájlt dupla kattintással indíthatod. A script a saját könyvtárából szolgálja ki a `public` mappát, így nem szükséges a projektet a XAMPP `htdocs` könyvtárába másolni vagy az Apache-ot elindítani.
+
+- Alapértelmezett PHP-útvonal: `R:\xampp\php\php.exe`. Ha máshol van a XAMPP, módosítsd a `.bat` fájl `PHP_EXE` értékét.
+- Port: **8091**, böngészőcím: **http://localhost:8091**. Másik porthoz a `PORT` értékét módosítsd.
+- A PHP `php.ini` fájljában a `pdo_sqlite` és `mbstring` bővítmény legyen engedélyezve.
+- Az indító ellenőrzi a PHP-fájl és a `public` mappa meglétét. Ha a port foglalt, a PHP a konzolban jelzi a hibát.
+- Az ablak maradjon nyitva a használat alatt; leállítás: **Ctrl+C**.
+
+Az indító az eredeti beállítás szerint `0.0.0.0` címre figyel, ezért a helyi hálózatról is elérhető lehet, ha a Windows tűzfala engedi. Kizárólag a saját gépen történő használathoz ezt `127.0.0.1` címre cserélheted. A PHP beépített szervere fejlesztési célra szolgál.
 
 ## Készlettételek lokációja
 
