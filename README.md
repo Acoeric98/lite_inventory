@@ -27,6 +27,19 @@ A készlettételhez a raktáron belüli lokáció is megadható (például `A-02
 
 A supervisor csak olyan raktárhoz oszthat hozzáférést, amelyhez maga is hozzáfér. Az admin automatikusan minden raktárat lát.
 
+## Adminisztráció és hibabejelentések
+
+A főmenüben a készletkezeléstől elkülönített **Adminisztráció** oldal csak supervisornak és adminnak jelenik meg; a közvetlen oldal- és műveletkérések is jogosultságellenőrzést kapnak. Az admin más felhasználók szerepkörét is módosíthatja. A saját szerepkör nem módosítható. A supervisor olvasó/író fiókokat hozhat létre, és csak a saját raktáraihoz adhat vagy vonhat meg hozzáférést. A szerepkörváltozás a következő kérésnél a már bejelentkezett felhasználóra is érvényes.
+
+A **Hibabejelentések** oldalon minden bejelentkezett felhasználó küldhet jegyet. Kötelező az email-cím (szerveroldali szintaktikai ellenőrzéssel), a típus (**Hiba**, **Fejlesztési javaslat**, **Kérdés**), a tárgy és a leírás. Nincs emailküldés vagy külső szolgáltatás. A beküldő csak a saját jegyeit és azok hozzászólásait látja; az admin és a supervisor minden jegyet kezelhet. A főmenüben piros számláló jelzi nekik az aktív jegyek számát, az oldal betöltésekor frissülve. Az aktív jegyekhez a beküldő és a kezelők hozzászólhatnak; lezárni és újranyitni csak admin vagy supervisor tud. A táblák meglévő adatbázisban is automatikusan létrejönnek.
+
+A jogosultságok és a jegykezelés HTTP-integrációs tesztje (Python 3 standard könyvtár, külön csomag nem kell; ideiglenes adatbázist és helyi PHP-szervert használ):
+
+```bash
+python3 tests/management_http.py
+# Eltérő PHP-útvonal esetén: PHP_BIN=/path/to/php python3 tests/management_http.py
+```
+
 ## Biztonság és mentés
 
 A jelszavak PHP `password_hash` használatával tárolódnak, az adatbázis-műveletek paraméterezettek, a módosító kéréseket CSRF token védi. Éles használatban HTTPS-t, rendszeres SQLite-fájlmentést és a `data` könyvtár webszerveren kívüli elhelyezését javasoljuk.
