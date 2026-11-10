@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/theme.php';
+
 const ROLE_VIEWER = 0;
 const ROLE_EDITOR = 1;
 const ROLE_SUPERVISOR = 2;
@@ -82,6 +84,13 @@ CREATE INDEX IF NOT EXISTS idx_ticket_comments_ticket ON ticket_comments(ticket_
 CREATE INDEX IF NOT EXISTS idx_tickets_creator ON tickets(created_by);
 CREATE INDEX IF NOT EXISTS idx_items_inventory ON items(inventory_id);
 SQL);
+    $userColumns = $pdo->query('PRAGMA table_info(users)')->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('theme_mode', $userColumns, true)) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN theme_mode TEXT NOT NULL DEFAULT 'system'");
+    }
+    if (!in_array('custom_theme', $userColumns, true)) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN custom_theme TEXT DEFAULT NULL');
+    }
     // Upgrade existing databases without losing their stock records.
     $columns = $pdo->query('PRAGMA table_info(items)')->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('location', $columns, true)) {

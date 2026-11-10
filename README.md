@@ -40,6 +40,12 @@ python3 tests/management_http.py
 # Eltérő PHP-útvonal esetén: PHP_BIN=/path/to/php python3 tests/management_http.py
 ```
 
+## Megjelenés
+
+A fő navigáció a fejlécben érhető el. A bejelentkezett felhasználók a **Megjelenés** menüben választhatnak **Világos**, **Sötét**, **Rendszer** és **Egyéni (custom)** módot. A Rendszer az operációs rendszer színmódját követi, annak változásakor is; ez az új és meglévő felhasználók alapbeállítása, valamint a bejelentkezési felület módja.
+
+Az egyéni palettán a háttér, panelek, szöveg, másodlagos szöveg, kiemelés és szegély színe állítható. A színek és a mód élő előnézetben láthatók, a visszaállítás gomb visszahozza a legutóbb mentett értékeket. A **Mentés** a saját felhasználó `theme_mode` és `custom_theme` mezőibe rögzíti a választást, így új bejelentkezéskor vagy másik eszközön is megmarad. Más mód kiválasztása nem törli az elmentett egyéni palettát. JavaScript nélkül is menthető a beállítás; csak az élő előnézethez szükséges JavaScript. A színkódok szerveroldali ellenőrzést, a mentés CSRF-védelmet kap. A szükséges adatbázismezők automatikusan létrejönnek.
+
 ## Biztonság és mentés
 
 A jelszavak PHP `password_hash` használatával tárolódnak, az adatbázis-műveletek paraméterezettek, a módosító kéréseket CSRF token védi. Éles használatban HTTPS-t, rendszeres SQLite-fájlmentést és a `data` könyvtár webszerveren kívüli elhelyezését javasoljuk.

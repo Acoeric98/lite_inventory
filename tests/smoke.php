@@ -22,5 +22,13 @@ if ($pdo->query('SELECT location FROM items')->fetchColumn() !== 'allokálatlan'
 if ((int)$pdo->query('SELECT quantity FROM items')->fetchColumn() !== 5) throw new RuntimeException('Migration changed stock');
 migrate($pdo);
 if ($pdo->query('PRAGMA integrity_check')->fetchColumn() !== 'ok') throw new RuntimeException('Database integrity check failed');
+if ($pdo->query('SELECT theme_mode FROM users')->fetchColumn() !== 'system') throw new RuntimeException('Wrong default theme');
+$pdo->exec('ALTER TABLE users DROP COLUMN theme_mode; ALTER TABLE users DROP COLUMN custom_theme');
+migrate($pdo);
+if ($pdo->query('SELECT theme_mode FROM users')->fetchColumn() !== 'system') throw new RuntimeException('Existing user theme migration failed');
+$pdo->exec("UPDATE users SET theme_mode='custom',custom_theme='{}'");
+migrate($pdo);
+if ($pdo->query('SELECT theme_mode FROM users')->fetchColumn() !== 'custom') throw new RuntimeException('Theme was overwritten');
+if (theme_foreground('#000000') !== '#ffffff' || theme_foreground('#ffffff') !== '#000000') throw new RuntimeException('Invalid contrast color');
 unset($pdo); @unlink($path); @unlink($path . '-wal'); @unlink($path . '-shm');
 echo "Smoke test OK\n";
