@@ -1,40 +1,38 @@
 <?php
 declare(strict_types=1);
 
-$adminActions = ['create_user', 'save_access', 'save_role'];
+$adminActions = ['create_user', 'save_access', 'save_role', 'save_manager', 'delete_user'];
 $ticketActions = ['create_ticket', 'comment_ticket', 'ticket_status'];
 if (in_array($action, $adminActions, true)) {
     if ($page !== 'admin' || !is_supervisor()) { http_response_code(403); exit('Nincs jogosultságod ehhez a művelethez.'); }
+    if (in_array($action, ['save_manager','delete_user','save_role'], true)) {
+        if (!is_admin()) { http_response_code(403); exit('Csak admin kezelheti a felettest, szerepkört vagy törölhet felhasználót.'); }
+        update_managed_user($pdo, (int)($_POST['user_id'] ?? 0), $action, $_POST);
+        flash($action === 'delete_user' ? 'Felhasználó törölve. A korábbi előzmények megmaradtak.' : 'Felhasználó módosítva.');
+        redirect('index.php?page=admin');
+    }
     if ($action === 'create_user') {
         $role = filter_var($_POST['role'] ?? null, FILTER_VALIDATE_INT);
         if ($role === false || $role < 0 || $role > (is_admin() ? 3 : 1)) throw new InvalidArgumentException('Ezt a jogosultságot nem adhatod meg.');
         $password = (string)($_POST['password'] ?? '');
         if (strlen($password) < 10) throw new InvalidArgumentException('A jelszó legalább 10 karakter legyen.');
-        $stmt = $pdo->prepare('INSERT INTO users(username,password_hash,role) VALUES(?,?,?)');
-        $stmt->execute([valid_text((string)($_POST['username'] ?? ''), 50), password_hash($password, PASSWORD_DEFAULT), $role]);
+        $stmt = $pdo->prepare('INSERT INTO users(username,password_hash,role,manager_id) VALUES(?,?,?,?)');
+        $stmt->execute([valid_text((string)($_POST['username'] ?? ''), 50), password_hash($password, PASSWORD_DEFAULT), $role, is_admin() ? null : user()['id']]);
         flash('Felhasználó létrehozva.');
     } else {
         $target = (int)($_POST['user_id'] ?? 0);
-        $stmt = $pdo->prepare('SELECT role FROM users WHERE id=?'); $stmt->execute([$target]); $targetRole = $stmt->fetchColumn();
+        $stmt = $pdo->prepare('SELECT role FROM users WHERE id=? AND deleted_at IS NULL'); $stmt->execute([$target]); $targetRole = $stmt->fetchColumn();
         if ($targetRole === false || $target === (int)user()['id'] || (!is_admin() && (int)$targetRole > ROLE_EDITOR)) {
             throw new InvalidArgumentException('Ezt a felhasználót nem módosíthatod.');
         }
-        if ($action === 'save_role') {
-            if (!is_admin()) { http_response_code(403); exit('Csak admin módosíthat szerepkört.'); }
-            $role = filter_var($_POST['role'] ?? null, FILTER_VALIDATE_INT);
-            if ($role === false || $role < 0 || $role > 3) throw new InvalidArgumentException('Hibás szerepkör.');
-            $pdo->prepare('UPDATE users SET role=? WHERE id=?')->execute([$role, $target]);
-            flash('Szerepkör módosítva.');
-        } else {
-            $inventoryId = (int)($_POST['inventory_id'] ?? 0);
-            require_inventory_access($pdo, $inventoryId);
-            $stmt = $pdo->prepare('SELECT 1 FROM inventories WHERE id=?'); $stmt->execute([$inventoryId]);
-            if (!$stmt->fetchColumn()) throw new InvalidArgumentException('A raktár nem található.');
-            if ((int)$targetRole === ROLE_ADMIN) throw new InvalidArgumentException('Az admin minden raktárhoz hozzáfér.');
-            if (isset($_POST['allowed'])) $pdo->prepare('INSERT OR IGNORE INTO inventory_access(user_id,inventory_id) VALUES(?,?)')->execute([$target,$inventoryId]);
-            else $pdo->prepare('DELETE FROM inventory_access WHERE user_id=? AND inventory_id=?')->execute([$target,$inventoryId]);
-            flash('Raktár-hozzáférés frissítve.');
-        }
+        $inventoryId = (int)($_POST['inventory_id'] ?? 0);
+        require_inventory_access($pdo, $inventoryId);
+        $stmt = $pdo->prepare('SELECT 1 FROM inventories WHERE id=?'); $stmt->execute([$inventoryId]);
+        if (!$stmt->fetchColumn()) throw new InvalidArgumentException('A raktár nem található.');
+        if ((int)$targetRole === ROLE_ADMIN) throw new InvalidArgumentException('Az admin minden raktárhoz hozzáfér.');
+        if (isset($_POST['allowed'])) $pdo->prepare('INSERT OR IGNORE INTO inventory_access(user_id,inventory_id) VALUES(?,?)')->execute([$target,$inventoryId]);
+        else $pdo->prepare('DELETE FROM inventory_access WHERE user_id=? AND inventory_id=?')->execute([$target,$inventoryId]);
+        flash('Raktár-hozzáférés frissítve.');
     }
     redirect('index.php?page=admin');
 }
