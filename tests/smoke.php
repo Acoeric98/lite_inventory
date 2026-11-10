@@ -4,7 +4,7 @@ require dirname(__DIR__) . '/src/app.php';
 $path = sys_get_temp_dir() . '/lite_inventory_test_' . bin2hex(random_bytes(4)) . '.sqlite';
 $pdo = db(['database' => $path]);
 $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'")->fetchAll(PDO::FETCH_COLUMN);
-foreach (['users','inventories','inventory_access','items'] as $table) {
+foreach (['users','inventories','inventory_access','items','tickets','ticket_comments'] as $table) {
     if (!in_array($table, $tables, true)) throw new RuntimeException("Missing table: $table");
 }
 $pdo->exec("INSERT INTO users(username,password_hash,role) VALUES('admin','hash',3)");

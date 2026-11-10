@@ -61,6 +61,25 @@ CREATE TABLE IF NOT EXISTS items (
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE(inventory_id, sku)
 );
+CREATE TABLE IF NOT EXISTS tickets (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ created_by INTEGER NOT NULL REFERENCES users(id),
+ email TEXT NOT NULL,
+ category TEXT NOT NULL CHECK(category IN ('bug','feature','question')),
+ subject TEXT NOT NULL,
+ body TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed')),
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ticket_comments (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+ user_id INTEGER NOT NULL REFERENCES users(id),
+ body TEXT NOT NULL,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_comments_ticket ON ticket_comments(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_creator ON tickets(created_by);
 CREATE INDEX IF NOT EXISTS idx_items_inventory ON items(inventory_id);
 SQL);
     // Upgrade existing databases without losing their stock records.
@@ -105,4 +124,20 @@ function valid_text(string $value, int $max = 120): string
     $value = trim($value);
     if ($value === '' || mb_strlen($value) > $max) throw new InvalidArgumentException('A kötelező mező hibás vagy túl hosszú.');
     return $value;
+}
+
+function ticket_categories(): array
+{
+    return ['bug' => 'Hiba', 'feature' => 'Fejlesztési javaslat', 'question' => 'Kérdés'];
+}
+
+function require_ticket(PDO $pdo, int $id): array
+{
+    $stmt = $pdo->prepare('SELECT tickets.*, users.username FROM tickets JOIN users ON users.id=tickets.created_by WHERE tickets.id=?');
+    $stmt->execute([$id]);
+    $ticket = $stmt->fetch();
+    if (!$ticket || (!is_supervisor() && (int)$ticket['created_by'] !== (int)user()['id'])) {
+        http_response_code(404); exit('A bejelentés nem található.');
+    }
+    return $ticket;
 }
