@@ -67,6 +67,29 @@ def run():
                 admin.post(action='setup', username='admin', password=password)
                 admin.login('admin', password)
                 assert 'Adminisztráció' in admin.page
+                assert 'aria-label="Főmenü"' in admin.page.split('</header>')[0]
+                palette = {'background':'#101820','surface':'#203040','text':'#eeeeee','muted':'#b0b0b0','accent':'#8addaa','border':'#607080'}
+                fields = {'colors['+key+']':value for key,value in palette.items()}
+                admin.post(action='save_theme', theme_mode='custom', **fields)
+                assert 'data-theme="custom"' in admin.page and '--paper:#101820;' in admin.page
+                admin.post(action='save_theme', theme_mode='dark')
+                assert 'data-theme="dark"' in admin.page
+                with sqlite3.connect(database) as db:
+                    import json
+                    saved = db.execute('SELECT custom_theme FROM users').fetchone()[0]
+                    assert json.loads(saved) == palette
+                invalid = dict(fields, **{'colors[accent]':'red;}</style><script>alert(1)</script>'})
+                admin.post(action='save_theme', theme_mode='custom', **invalid)
+                assert 'data-theme="dark"' in admin.page and '<script>alert(1)</script>' not in admin.page
+                admin.post(action='save_theme', theme_mode='unknown')
+                assert 'data-theme="dark"' in admin.page
+                admin.post(action='save_theme', theme_mode='custom', **fields)
+                admin.post(action='logout')
+                admin.login('admin', password)
+                assert 'data-theme="custom"' in admin.page
+                for theme in ['light','system']:
+                    admin.post(action='save_theme', theme_mode=theme)
+                    assert 'data-theme="'+theme+'"' in admin.page
                 assert 'Új felhasználó' not in admin.page
                 admin.request('?page=admin')
                 assert 'Új felhasználó' in admin.page
@@ -79,6 +102,11 @@ def run():
                 clients = {name: Client(base) for name in ['viewer','editor','supervisor','other']}
                 for name, client in clients.items():
                     client.login(name, password)
+                viewer = clients['viewer']
+                viewer.post(action='save_theme', theme_mode='light', user_id=ids['admin'])
+                with sqlite3.connect(database) as db:
+                    assert db.execute('SELECT theme_mode FROM users WHERE id=?', (ids['admin'],)).fetchone()[0] == 'system'
+                    assert db.execute('SELECT theme_mode FROM users WHERE id=?', (ids['viewer'],)).fetchone()[0] == 'light'
                 for name in ['viewer', 'editor']:
                     client = clients[name]
                     assert 'Adminisztráció' not in client.page

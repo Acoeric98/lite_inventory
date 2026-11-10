@@ -6,7 +6,7 @@ require dirname(__DIR__) . '/src/app.php';
 $pdo = db($config);
 // Refresh roles from the database so changes apply to existing sessions.
 if (user()) {
-    $stmt = $pdo->prepare('SELECT id, username, role FROM users WHERE id=?');
+    $stmt = $pdo->prepare('SELECT id, username, role, theme_mode, custom_theme FROM users WHERE id=?');
     $stmt->execute([user()['id']]);
     $_SESSION['user'] = $stmt->fetch() ?: null;
 }
@@ -35,6 +35,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($action === 'logout') { $_SESSION = []; session_destroy(); redirect(); }
         if (!user()) redirect();
+        if ($action === 'save_theme') {
+            $mode = (string)($_POST['theme_mode'] ?? '');
+            if (!in_array($mode, ['light','dark','system','custom'], true)) throw new InvalidArgumentException('Hibás megjelenítési mód.');
+            $colors = null;
+            if ($mode === 'custom') {
+                $colors = validate_theme_colors(is_array($_POST['colors'] ?? null) ? $_POST['colors'] : []);
+            }
+            // Switching modes preserves the user's existing custom palette.
+            if ($colors !== null) $pdo->prepare('UPDATE users SET theme_mode=?,custom_theme=? WHERE id=?')->execute([$mode,json_encode($colors),user()['id']]);
+            else $pdo->prepare('UPDATE users SET theme_mode=? WHERE id=?')->execute([$mode,user()['id']]);
+            flash('Megjelenítés elmentve.');
+            redirect('index.php?page='.$page.(!empty($_GET['ticket']) ? '&ticket='.(int)$_GET['ticket'] : '').(!empty($_GET['inventory']) ? '&inventory='.(int)$_GET['inventory'] : ''));
+        }
         require __DIR__ . '/../src/management_actions.php';
         if ($action === 'create_inventory' && is_admin()) {
             $stmt = $pdo->prepare('INSERT INTO inventories(name,location) VALUES(?,?)');
@@ -67,4 +80,7 @@ if (user() && $page === 'stock') {
 }
 require __DIR__ . '/../src/management_data.php';
 $flash=$_SESSION['flash']??null; unset($_SESSION['flash']);
+$themeMode = user()['theme_mode'] ?? 'system';
+if (!in_array($themeMode, ['light','dark','system','custom'], true)) $themeMode = 'system';
+$themeColors = saved_theme_colors(user()['custom_theme'] ?? null);
 require __DIR__ . '/view.php';
