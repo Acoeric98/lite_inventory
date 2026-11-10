@@ -6,7 +6,7 @@ require dirname(__DIR__) . '/src/app.php';
 $pdo = db($config);
 // Refresh roles from the database so changes apply to existing sessions.
 if (user()) {
-    $stmt = $pdo->prepare('SELECT id, username, role, theme_mode, custom_theme FROM users WHERE id=?');
+    $stmt = $pdo->prepare('SELECT id, username, role, theme_mode, custom_theme FROM users WHERE id=? AND deleted_at IS NULL');
     $stmt->execute([user()['id']]);
     $_SESSION['user'] = $stmt->fetch() ?: null;
 }
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Az admin fiók elkészült. Most jelentkezz be.'); redirect();
         }
         if ($action === 'login') {
-            $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ?');
+            $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ? AND deleted_at IS NULL');
             $stmt->execute([trim((string)$_POST['username'])]); $found = $stmt->fetch();
             if (!$found || !password_verify((string)$_POST['password'], $found['password_hash'])) throw new InvalidArgumentException('Hibás felhasználónév vagy jelszó.');
             session_regenerate_id(true); unset($found['password_hash']); $_SESSION['user'] = $found; redirect();

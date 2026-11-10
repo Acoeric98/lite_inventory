@@ -52,6 +52,12 @@ python3 tests/management_http.py
 # Eltérő PHP-útvonal esetén: PHP_BIN=/path/to/php python3 tests/management_http.py
 ```
 
+### Közvetlen felettes és felhasználótörlés
+
+Az admin minden aktív felhasználónál beállíthat **Közvetlen felettest** (aktív supervisor vagy admin), vagy a „Nincs megadva” lehetőséggel törölheti a kapcsolatot. Többszintű lánc is létrehozható, például `vezető → supervisor → munkatárs`. A felületen a teljes lánc és a közvetlen beosztottak is láthatók. Saját magát senki nem kaphatja felettesül, és körkörös kapcsolat sem menthető. A supervisor által létrehozott olvasó/író fiókok automatikusan az adott supervisor alá kerülnek; az admin ezt később módosíthatja. A hierarchia szervezeti nyilvántartás, nem változtatja meg a szerepköröket vagy a raktárjogosultságokat.
+
+A **Felhasználó törlése** gomb csak admin számára, más felhasználók kártyáján jelenik meg, megerősítéssel. A törölt fiók eltűnik az aktív listából, nem léphet be, meglévő munkamenete a következő kéréskor megszűnik, raktár-hozzáféréseit eltávolítjuk. Az adatbázisban a fiók töröltként megmarad a korábbi jegyek, hozzászólások és készletmódosítások szerzőségének megőrzéséhez; a felhasználóneve nem használható fel újra. A saját fiók és az utolsó aktív admin nem törölhető. Beosztottakkal rendelkező felettest csak a beosztottak áthelyezése vagy kapcsolatuk megszüntetése után lehet törölni, illetve olvasó/író szerepkörre módosítani. A meglévő felhasználók felettese kezdetben nincs megadva; az új mezők automatikusan létrejönnek.
+
 ## Megjelenés
 
 A fő navigáció a fejlécben érhető el. A bejelentkezett felhasználók a **Megjelenés** menüben választhatnak **Világos**, **Sötét**, **Rendszer** és **Egyéni (custom)** módot. A Rendszer az operációs rendszer színmódját követi, annak változásakor is; ez az új és meglévő felhasználók alapbeállítása, valamint a bejelentkezési felület módja.

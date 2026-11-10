@@ -91,6 +91,13 @@ SQL);
     if (!in_array('custom_theme', $userColumns, true)) {
         $pdo->exec('ALTER TABLE users ADD COLUMN custom_theme TEXT DEFAULT NULL');
     }
+    if (!in_array('manager_id', $userColumns, true)) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN manager_id INTEGER DEFAULT NULL REFERENCES users(id)');
+    }
+    if (!in_array('deleted_at', $userColumns, true)) {
+        $pdo->exec('ALTER TABLE users ADD COLUMN deleted_at TEXT DEFAULT NULL');
+    }
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_users_manager ON users(manager_id)');
     // Upgrade existing databases without losing their stock records.
     $columns = $pdo->query('PRAGMA table_info(items)')->fetchAll(PDO::FETCH_COLUMN, 1);
     if (!in_array('location', $columns, true)) {
@@ -150,3 +157,5 @@ function require_ticket(PDO $pdo, int $id): array
     }
     return $ticket;
 }
+
+require_once __DIR__ . '/users.php';

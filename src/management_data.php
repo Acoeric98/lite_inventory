@@ -8,7 +8,12 @@ if ($page === 'admin') {
         $stmt = $pdo->prepare('SELECT i.* FROM inventories i JOIN inventory_access a ON a.inventory_id=i.id WHERE a.user_id=? ORDER BY i.name');
         $stmt->execute([user()['id']]); $inventories = $stmt->fetchAll();
     }
-    $users = $pdo->query('SELECT id,username,role FROM users ORDER BY username')->fetchAll();
+    $users = $pdo->query('SELECT id,username,role,manager_id FROM users WHERE deleted_at IS NULL ORDER BY username')->fetchAll();
+    $userMap = array_column($users, null, 'id');
+    $directReports = [];
+    foreach ($users as $member) {
+        if ($member['manager_id'] !== null) $directReports[(int)$member['manager_id']][] = $member['username'];
+    }
     $access = [];
     foreach ($pdo->query('SELECT user_id,inventory_id FROM inventory_access') as $row) $access[(int)$row['user_id']][(int)$row['inventory_id']] = true;
 }

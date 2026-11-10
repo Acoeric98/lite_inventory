@@ -165,8 +165,67 @@ def run():
                     assert db.execute('SELECT COUNT(*) FROM ticket_comments').fetchone()[0] == 2
                     assert db.execute('SELECT role FROM users WHERE id=?', (ids['viewer'],)).fetchone()[0] == 0
                     assert db.execute('SELECT COUNT(*) FROM inventory_access WHERE user_id=? AND inventory_id=2', (ids['viewer'],)).fetchone()[0] == 0
+                admin.request('?page=admin')
+                admin.post('?page=admin', action='save_role', user_id=ids['supervisor'], role=2)
+                admin.post('?page=admin', action='create_user', username='boss', password=password, role=2)
+                with sqlite3.connect(database) as db:
+                    boss = db.execute("SELECT id FROM users WHERE username='boss'").fetchone()[0]
+                admin.post('?page=admin', action='save_manager', user_id=ids['supervisor'], manager_id=boss)
+                admin.post('?page=admin', action='save_manager', user_id=ids['viewer'], manager_id=ids['supervisor'])
+                assert 'boss → supervisor → viewer' in admin.page
+                admin.post('?page=admin', action='save_manager', user_id=boss, manager_id=ids['supervisor'])
+                assert 'nem lehet körkörös' in admin.page
+                admin.post('?page=admin', action='save_manager', user_id=boss, manager_id=boss)
+                assert 'nem lehet körkörös' in admin.page
+                admin.post('?page=admin', action='save_manager', user_id=boss, manager_id=ids['editor'])
+                assert 'Csak aktív supervisor vagy admin' in admin.page
+                admin.post('?page=admin', action='save_manager', user_id=boss, manager_id=999999)
+                assert 'Csak aktív supervisor vagy admin' in admin.page
+                admin.post('?page=admin', action='delete_user', user_id=ids['supervisor'])
+                assert 'Előbb rendeld át' in admin.page
+                admin.post('?page=admin', action='save_role', user_id=ids['supervisor'], role=0)
+                assert 'Előbb rendeld át' in admin.page
+                supervisor.request('?page=admin')
+                assert 'Felhasználó törlése' not in supervisor.page
+                for action in ['delete_user','save_manager']:
+                    supervisor.post('?page=admin', action=action, user_id=ids['viewer'], manager_id=boss, expected=403)
+                    supervisor.request('?page=admin')
+                supervisor.post('?page=admin', action='create_user', username='auto-child', password=password, role=0)
+                with sqlite3.connect(database) as db:
+                    child = db.execute("SELECT id,manager_id FROM users WHERE username='auto-child'").fetchone()
+                    assert child[1] == ids['supervisor']
+                    db.execute("INSERT INTO items(inventory_id,sku,name,updated_by) VALUES(1,'HISTORY','Előzmény',?)", (ids['viewer'],))
+                admin.request('?page=admin')
+                admin.post('?page=admin', action='delete_user', user_id=ids['admin'])
+                assert 'A saját fiókodat nem törölheted' in admin.page
+                # Removing a person revokes access while retaining authorship and tickets.
+                admin.post('?page=admin', action='delete_user', user_id=ids['viewer'])
+                assert 'Felhasználó törölve' in admin.page
+                assert '<h2>viewer</h2>' not in admin.page
+                reporter.request('?page=tickets')
+                assert 'Belépés a raktárba' in reporter.page
+                reporter.login('viewer', password)
+                assert 'Hibás felhasználónév vagy jelszó' in reporter.page
+                admin.request('?page=tickets&ticket=1')
+                assert 'Beküldő válasza' in admin.page
+                admin.request('?page=admin')
+                admin.post('?page=admin', action='save_access', user_id=ids['viewer'], inventory_id=1, allowed='on')
+                assert 'nem módosíthatod' in admin.page
+                admin.post('?page=admin', action='save_manager', user_id=child[0], manager_id=boss)
+                admin.post('?page=admin', action='delete_user', user_id=ids['supervisor'])
+                assert 'Felhasználó törölve' in admin.page
+                admin.post('?page=admin', action='save_manager', user_id=ids['editor'], manager_id=ids['supervisor'])
+                assert 'Csak aktív supervisor vagy admin' in admin.page
+                admin.post('?page=admin', action='save_manager', user_id=child[0], manager_id='')
+                with sqlite3.connect(database) as db:
+                    assert db.execute('SELECT deleted_at FROM users WHERE id=?', (ids['viewer'],)).fetchone()[0]
+                    assert db.execute('SELECT COUNT(*) FROM inventory_access WHERE user_id=?', (ids['viewer'],)).fetchone()[0] == 0
+                    assert db.execute("SELECT updated_by FROM items WHERE sku='HISTORY'").fetchone()[0] == ids['viewer']
+                    assert db.execute('SELECT COUNT(*) FROM ticket_comments').fetchone()[0] == 2
+                    assert db.execute('SELECT manager_id FROM users WHERE id=?', (child[0],)).fetchone()[0] is None
+                    assert db.execute('PRAGMA foreign_key_check').fetchall() == []
                 assert Client(base).request('?page=admin').find('Belépés a raktárba') >= 0
-                print('Management HTTP checks OK: roles, session refresh, access scope, tickets, email, categories, comments, status, notification, escaping, CSRF')
+                print('Management HTTP checks OK: roles, session refresh, access scope, tickets, email, categories, comments, status, notification, escaping, CSRF, reporting hierarchy, account deletion')
             finally:
                 server.terminate()
                 server.wait()
