@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS items (
  name TEXT NOT NULL,
  quantity INTEGER NOT NULL DEFAULT 0 CHECK(quantity >= 0),
  unit TEXT NOT NULL DEFAULT 'db',
+ location TEXT NOT NULL DEFAULT 'allokálatlan',
  note TEXT NOT NULL DEFAULT '',
  updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -62,6 +63,11 @@ CREATE TABLE IF NOT EXISTS items (
 );
 CREATE INDEX IF NOT EXISTS idx_items_inventory ON items(inventory_id);
 SQL);
+    // Upgrade existing databases without losing their stock records.
+    $columns = $pdo->query('PRAGMA table_info(items)')->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('location', $columns, true)) {
+        $pdo->exec("ALTER TABLE items ADD COLUMN location TEXT NOT NULL DEFAULT 'allokálatlan'");
+    }
 }
 
 function e(mixed $value): string { return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }

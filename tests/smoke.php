@@ -11,5 +11,16 @@ $pdo->exec("INSERT INTO users(username,password_hash,role) VALUES('admin','hash'
 $pdo->exec("INSERT INTO inventories(name,location) VALUES('Teszt','Budapest')");
 $pdo->exec("INSERT INTO items(inventory_id,sku,name,quantity) VALUES(1,'SKU-1','Doboz',5)");
 if ((int)$pdo->query('SELECT quantity FROM items')->fetchColumn() !== 5) throw new RuntimeException('Item insert failed');
+if ($pdo->query('SELECT location FROM items')->fetchColumn() !== 'allokálatlan') throw new RuntimeException('Missing default location');
+$pdo->exec("UPDATE items SET location='A-02 polc' WHERE sku='SKU-1'");
+migrate($pdo);
+if ($pdo->query('SELECT location FROM items')->fetchColumn() !== 'A-02 polc') throw new RuntimeException('Migration changed assigned location');
+// Simulate a database created before item locations were introduced.
+$pdo->exec('ALTER TABLE items DROP COLUMN location');
+migrate($pdo);
+if ($pdo->query('SELECT location FROM items')->fetchColumn() !== 'allokálatlan') throw new RuntimeException('Existing item was not migrated');
+if ((int)$pdo->query('SELECT quantity FROM items')->fetchColumn() !== 5) throw new RuntimeException('Migration changed stock');
+migrate($pdo);
+if ($pdo->query('PRAGMA integrity_check')->fetchColumn() !== 'ok') throw new RuntimeException('Database integrity check failed');
 unset($pdo); @unlink($path); @unlink($path . '-wal'); @unlink($path . '-shm');
 echo "Smoke test OK\n";

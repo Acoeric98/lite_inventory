@@ -12,6 +12,10 @@ php -S localhost:8080 -t public
 
 Nyisd meg a `http://localhost:8080` címet. Első indításkor a felület bekéri az admin nevét és (legalább 10 karakteres) jelszavát. Az SQLite fájl automatikusan létrejön a `data/inventory.sqlite` helyen; más útvonal az `INVENTORY_DB` környezeti változóval adható meg.
 
+## Készlettételek lokációja
+
+A készlettételhez a raktáron belüli lokáció is megadható (például `A-02 polc`). Ha üresen marad, az értéke `allokálatlan`. A lokáció a készlettáblázatban is látható. A meglévő tételek automatikusan `allokálatlan` lokációt kapnak az első indításkor. Azonos raktárban a cikkszám szerinti mentés a lokációt is frissíti.
+
 ## Jogosultságok
 
 | Szint | Szerepkör | Lehetőségek |
