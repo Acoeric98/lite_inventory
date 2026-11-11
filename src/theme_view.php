@@ -1,4 +1,4 @@
-<details class="theme-settings"><summary>Megjelenés</summary>
+<details class="panel theme-settings" id="appearance"><summary>Megjelenés</summary>
 <form method="post" class="theme-panel stack" id="theme-form">
 <input type="hidden" name="csrf" value="<?=csrf_token()?>">
 <label>Megjelenítési mód<select name="theme_mode" id="theme-mode">
